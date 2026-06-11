@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flashcard Quiz App (Global Version)</title>
+    <style>
+        :root {
+            /* Dark Mode Color Palette */
+            --bg: #121212;
+            --surface: #1e1e1e;
+            --surface-hover: #2c2c2c;
+            --primary: #bb86fc;
+            --primary-hover: #9965f4;
+            --secondary: #03dac6;
+            --text: #ffffff;
+            --text-muted: #a0a0a0;
+            --error: #cf6679;
+            --success: #4caf50;
+            --border: #333333;
+            --radius: 12px;
+            --transition: 0.3s ease;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Typography & Utilities */
+        h1, h2, h3 { font-weight: 600; margin-bottom: 1rem; }
+        .hidden { display: none !important; }
+        .text-center { text-align: center; }
+        .text-muted { color: var(--text-muted); }
+        .flex { display: flex; }
+        .flex-col { display: flex; flex-direction: column; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+        .justify-center { justify-content: center; }
+        .gap-1 { gap: 0.5rem; }
+        .gap-2 { gap: 1rem; }
+        .gap-3 { gap: 1.5rem; }
+        
+        /* Layout */
+        header {
+            padding: 1.5rem 2rem;
+            background-color: var(--surface);
+            border-bottom: 1px solid var(--border);
+            text-align: center;
+        }
+
+        main {
+            flex: 1;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+        }
+
+        /* Buttons & Inputs */
+        button {
+            background-color: var(--surface);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all var(--transition);
+            font-family: inherit;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: var(--surface-hover);
+            border-color: var(--primary);
+        }
+
+        button.primary {
+            background-color: var(--primary);
+            color: #000;
+            border: none;
+            font-weight: 600;
+        }
+
+        button.primary:hover:not(:disabled) {
+            background-color: var(--primary-hover);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .upload-btn {
+            display: inline-block;
+            background-color: var(--primary);
+            color: #000;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background var(--transition);
+        }
+        .upload-btn:hover { background-color: var(--primary-hover); }
+
+        input[type="text"] {
+            width: 100%;
+            background-color: var(--bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            transition: border var(--transition);
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(187, 134, 252, 0.2);
+        }
+
+        /* Toggles */
+        .toggle-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+        }
+        .toggle-group input[type="checkbox"] {
+            accent-color: var(--primary);
+            width: 1.2rem;
+            height: 1.2rem;
+            cursor: pointer;
+        }
+
+        /* Loading Screen */
+        .loader-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .spinner {
+            width: 50px; height: 50px;
+            border: 5px solid var(--surface);
+            border-top: 5px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Home View */
+        .quiz-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .quiz-card {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            transition: transform var(--transition), box-shadow var(--transition);
+        }
+
+        .quiz-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+            border-color: var(--primary);
+        }
+
+        .quiz-card h3 { margin: 0; font-size: 1.25rem; word-break: break-all; }
+        
+        .quiz-card-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: auto;
+        }
+        .quiz-card-actions button { padding: 0.5rem; flex: 1; }
+        .btn-delete { border-color: var(--error) !important; color: var(--error) !important; }
+        .btn-delete:hover { background-color: rgba(207, 102, 121, 0.1) !important; }
+
+        /* Quiz View */
+        .quiz-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 8px;
+            background-color: var(--surface);
+            border-radius: 4px;
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background-color: var(--primary);
+            width: 0%;
+            transition: width 0.4s ease;
+        }
+
+        .flashcard {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 3rem 2rem;
+            min-height: 350px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            animation: fadeIn 0.4s ease forwards;
+            position: relative;
+        }
+
+        .question-text {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            white-space: pre-wrap;
+        }
+
+        .mcq-choices {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .mcq-choice {
+            text-align: left;
+            padding: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .mcq-choice.correct {
+            background-color: rgba(76, 175, 80, 0.2);
+            border-color: var(--success);
+            color: var(--success);
+        }
+
+        .mcq-choice.incorrect {
+            background-color: rgba(207, 102, 121, 0.2);
+            border-color: var(--error);
+            color: var(--error);
+        }
+
+        .feedback-banner {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+            animation: slideIn 0.3s ease forwards;
+        }
+        .feedback-banner.correct { background-color: rgba(76, 175, 80, 0.2); color: var(--success); }
+        .feedback-banner.incorrect { background-color: rgba(207, 102, 121, 0.2); color: var(--error); }
+        .feedback-banner.skipped { background-color: rgba(160, 160, 160, 0.2); color: var(--text-muted); }
+
+        .quiz-controls {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 1rem;
+        }
+
+        /* Results View */
+        .results-summary {
+            background-color: var(--surface);
+            border-radius: var(--radius);
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .results-score {
+            font-size: 3.5rem;
+            color: var(--primary);
+            font-weight: bold;
+            margin: 1rem 0;
+        }
+
+        .results-stats {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-box { display: flex; flex-direction: column; }
+        .stat-num { font-size: 1.5rem; font-weight: bold; }
+        .stat-num.correct { color: var(--success); }
+        .stat-num.incorrect { color: var(--error); }
+        .stat-num.skipped { color: var(--text-muted); }
+
+        .review-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .review-card {
+            background-color: var(--surface);
+            border-left: 4px solid var(--error);
+            padding: 1.5rem;
+            border-radius: 0 var(--radius) var(--radius) 0;
+        }
+        .review-card.skipped-card { border-left-color: var(--text-muted); }
+
+        .review-q { font-weight: 600; margin-bottom: 0.5rem; font-size: 1.1rem; }
+        .review-your-ans { color: var(--error); margin-bottom: 0.25rem; }
+        .review-correct-ans { color: var(--success); }
+        .review-card.skipped-card .review-your-ans { color: var(--text-muted); }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.98); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .quiz-controls { flex-direction: column; }
+            .nav-buttons { width: 100%; display: flex; justify-content: space-between; }
+            .nav-buttons button { flex: 1; }
+            .results-stats { flex-direction: column; gap: 1rem; }
+            main { padding: 1rem; }
+            .flashcard { padding: 2rem 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Loading Screen for Global Database sync -->
+    <div id="loader" class="loader-overlay hidden">
+        <div class="spinner"></div>
+        <h3 id="loader-text">იტვირთება მონაცემები...</h3>
+    </div>
+
+    <header>
+        <h1>Global Flashcard Quiz</h1>
+    </header>
+
+    <main>
+        <!-- Home View -->
+        <section id="view-home">
+            <div class="flex flex-col items-center gap-2" style="background: var(--surface); padding: 2rem; border-radius: var(--radius); border: 1px solid var(--border);">
+                <h2>Upload a New Quiz</h2>
+                <p class="text-muted text-center">ატვირთეთ .txt ფაილი, რომელსაც ყველა მომხმარებელი დაინახავს.</p>
+                <label class="upload-btn">
+                    Choose File
+                    <input type="file" id="file-upload" accept=".txt">
+                </label>
+            </div>
+
+            <div style="margin-top: 3rem;">
+                <div class="flex justify-between items-center" style="margin-bottom: 1rem;">
+                    <h2>Global Quizzes</h2>
+                </div>
+                
+                <!-- Global Settings for Quiz -->
+                <div class="flex gap-3 flex-wrap" style="background: var(--surface); padding: 1rem; border-radius: 8px; border: 1px solid var(--border);">
+                    <label class="toggle-group">
+                        <input type="checkbox" id="setting-randomize">
+                        Randomize Question Order
+                    </label>
+                    <label class="toggle-group">
+                        <input type="checkbox" id="setting-shuffle">
+                        Shuffle Multiple Choice Answers
+                    </label>
+                </div>
+
+                <div id="quiz-list" class="quiz-list">
+                    <!-- Quiz Cards injected here -->
+                </div>
+                <p id="no-quizzes-msg" class="text-muted text-center hidden" style="margin-top: 2rem;">არცერთი ქვიზი არ არის ატვირთული.</p>
+                <p id="api-error-msg" class="text-error text-center hidden" style="color: var(--error); margin-top: 2rem; border: 1px solid var(--error); padding: 1rem; border-radius: 8px;">
+                    <strong>ყურადღება:</strong> API კოდები არ არის დაყენებული. გთხოვთ გაეცნოთ ინსტრუქციას და ჩაასწოროთ BIN_ID და API_KEY კოდში.
+                </p>
+            </div>
+        </section>
+
+        <!-- Quiz View -->
+        <section id="view-quiz" class="hidden">
+            <div class="quiz-header">
+                <span id="quiz-title-display">Quiz Name</span>
+                <span id="quiz-score-display">Score: 0</span>
+            </div>
+
+            <div class="progress-container">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+
+            <div class="flashcard" id="flashcard-container">
+                <div class="text-muted text-center" style="margin-bottom: 1rem;" id="question-counter">Question 1 of 10</div>
+                <div class="question-text" id="question-text">Question goes here?</div>
+                
+                <!-- Dynamic Input Area -->
+                <div id="answer-area"></div>
+
+                <!-- Feedback Area -->
+                <div id="feedback-area"></div>
+            </div>
+
+            <div class="quiz-controls">
+                <button id="btn-quit" onclick="App.quitQuiz()">Quit Quiz</button>
+                <div class="nav-buttons">
+                    <button id="btn-prev" onclick="App.prevQuestion()">Prev</button>
+                    <button id="btn-skip" onclick="App.skipQuestion()">Skip</button>
+                    <button id="btn-next" onclick="App.nextQuestion()">Next</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Results View -->
+        <section id="view-results" class="hidden">
+            <div class="results-summary">
+                <h2>Quiz Completed!</h2>
+                <div class="results-score" id="results-score-pct">100%</div>
+                <p style="font-size: 1.2rem; margin-bottom: 2rem;">Final Score: <span id="results-score-abs"></span></p>
+
+                <div class="results-stats">
+                    <div class="stat-box">
+                        <span class="stat-num correct" id="results-correct">0</span>
+                        <span>Correct</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-num incorrect" id="results-incorrect">0</span>
+                        <span>Incorrect</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-num skipped" id="results-skipped">0</span>
+                        <span>Skipped</span>
+                    </div>
+                </div>
+
+                <div class="flex justify-center gap-2 mt-2">
+                    <button class="primary" onclick="App.retakeQuiz()">Retake Quiz</button>
+                    <button onclick="App.showHome()">Return Home</button>
+                </div>
+            </div>
+
+            <div id="review-container">
+                <h3 style="margin-bottom: 1rem;">Review Incorrect Answers</h3>
+                <div class="review-section" id="review-list"></div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        /**
+         * Global API Database Wrapper (JSONBin.io)
+         */
+        const DB = (() => {
+            // =================================================================
+            // აქ ჩასვით თქვენი მონაცემები JSONBIN.IO-დან!
+            // =================================================================
+            const BIN_ID = 'YOUR_BIN_ID'; 
+            const API_KEY = 'YOUR_API_KEY'; 
+            // =================================================================
+
+            const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+
+            const getHeaders = () => ({
+                'Content-Type': 'application/json',
+                'X-Master-Key': API_KEY
+            });
+
+            const isConfigured = () => BIN_ID !== 'YOUR_BIN_ID' && API_KEY !== 'YOUR_API_KEY';
+
+            const getAll = async () => {
+                if (!isConfigured()) return null; // Returns null to signal unconfigured API
+                
+                try {
+                    const res = await fetch(API_URL, { headers: getHeaders() });
+                    if (!res.ok) throw new Error('API Request Failed');
+                    const data = await res.json();
+                    return Array.isArray(data.record) ? data.record : [];
+                } catch (e) {
+                    console.error("DB Fetch Error:", e);
+                    return [];
+                }
+            };
+
+            const get = async (name) => {
+                const quizzes = await getAll();
+                if (!quizzes) return null;
+                return quizzes.find(q => q.name === name);
+            };
+
+            const save = async (quizObj) => {
+                if (!isConfigured()) return;
+                const quizzes = await getAll() || [];
+                
+                // Remove if already exists to overwrite
+                const filtered = quizzes.filter(q => q.name !== quizObj.name);
+                filtered.push(quizObj);
+                
+                await fetch(API_URL, {
+                    method: 'PUT',
+                    headers: getHeaders(),
+                    body: JSON.stringify(filtered)
+                });
+            };
+
+            const remove = async (name) => {
+                if (!isConfigured()) return;
+                let quizzes = await getAll() || [];
+                quizzes = quizzes.filter(q => q.name !== name);
+                
+                await fetch(API_URL, {
+                    method: 'PUT',
+                    headers: getHeaders(),
+                    body: JSON.stringify(quizzes)
+                });
+            };
+
+            return { isConfigured, getAll, get, save, remove };
+        })();
+
+        /**
+         * Quiz Parser
+         */
+        const Parser = (() => {
+            const parse = (content) => {
+                const blocks = content.split('***').map(b => b.trim()).filter(b => b);
+                const questions = [];
+
+                for (const block of blocks) {
+                    const lines = block.split('\n').map(l => l.trim()).filter(l => l);
+                    const qText = [];
+                    const choices = [];
+                    let correct = null;
+
+                    for (const line of lines) {
+                        if (line.startsWith('**')) {
+                            correct = line.substring(2).trim();
+                        } else if (line.startsWith('*')) {
+                            choices.push(line.substring(1).trim());
+                        } else {
+                            qText.push(line);
+                        }
+                    }
+
+                    if (qText.length === 0 || !correct) continue;
+
+                    if (choices.length > 0) {
+                        const hasCorrectInChoices = choices.some(c => c.toLowerCase() === correct.toLowerCase());
+                        if (!hasCorrectInChoices) {
+                            choices.push(correct);
+                        }
+                    }
+
+                    questions.push({
+                        question: qText.join('\n'),
+                        choices: choices.length > 0 ? [...new Set(choices)] : null,
+                        correct: correct,
+                        type: choices.length > 0 ? 'mcq' : 'text'
+                    });
+                }
+                return questions;
+            };
+            return { parse };
+        })();
+
+        /**
+         * Main Application Logic
+         */
+        const App = (() => {
+            // State
+            let quizzes = [];
+            let currentQuiz = null;
+            let questions = [];
+            let userAnswers = [];
+            let currentIdx = 0;
+            let score = 0;
+
+            // DOM Elements
+            const els = {
+                loader: document.getElementById('loader'),
+                views: {
+                    home: document.getElementById('view-home'),
+                    quiz: document.getElementById('view-quiz'),
+                    results: document.getElementById('view-results')
+                },
+                home: {
+                    fileUpload: document.getElementById('file-upload'),
+                    quizList: document.getElementById('quiz-list'),
+                    noQuizzesMsg: document.getElementById('no-quizzes-msg'),
+                    apiErrorMsg: document.getElementById('api-error-msg'),
+                    setRandomize: document.getElementById('setting-randomize'),
+                    setShuffle: document.getElementById('setting-shuffle')
+                },
+                quiz: {
+                    title: document.getElementById('quiz-title-display'),
+                    score: document.getElementById('quiz-score-display'),
+                    progressBar: document.getElementById('progress-bar'),
+                    flashcard: document.getElementById('flashcard-container'),
+                    counter: document.getElementById('question-counter'),
+                    qText: document.getElementById('question-text'),
+                    answerArea: document.getElementById('answer-area'),
+                    feedbackArea: document.getElementById('feedback-area'),
+                    btnPrev: document.getElementById('btn-prev'),
+                    btnSkip: document.getElementById('btn-skip'),
+                    btnNext: document.getElementById('btn-next')
+                },
+                results: { ... } // Re-using dynamic gets below
+            };
+
+            const toggleLoader = (show) => {
+                if (show) els.loader.classList.remove('hidden');
+                else els.loader.classList.add('hidden');
+            };
+
+            // Init
+            const init = async () => {
+                els.home.fileUpload.addEventListener('change', handleFileUpload);
+                document.addEventListener('keydown', handleKeyboard);
+                
+                if (!DB.isConfigured()) {
+                    els.home.apiErrorMsg.classList.remove('hidden');
+                } else {
+                    await loadQuizzes();
+                }
+            };
+
+            const switchView = (viewName) => {
+                Object.values(els.views).forEach(v => v.classList.add('hidden'));
+                els.views[viewName].classList.remove('hidden');
+            };
+
+            const loadQuizzes = async () => {
+                toggleLoader(true);
+                const data = await DB.getAll();
+                toggleLoader(false);
+
+                if (data === null) return; // API error or not set
+                quizzes = data;
+                renderQuizList();
+            };
+
+            const renderQuizList = () => {
+                els.home.quizList.innerHTML = '';
+                if (quizzes.length === 0) {
+                    els.home.noQuizzesMsg.classList.remove('hidden');
+                } else {
+                    els.home.noQuizzesMsg.classList.add('hidden');
+                    quizzes.forEach(quiz => {
+                        const card = document.createElement('div');
+                        card.className = 'quiz-card';
+                        card.innerHTML = `
+                            <h3>${quiz.name}</h3>
+                            <p class="text-muted">${quiz.parsedData.length} Questions</p>
+                            <div class="quiz-card-actions">
+                                <button class="primary" onclick="App.startQuiz('${quiz.name.replace(/'/g, "\\'")}')">Start</button>
+                                <button class="btn-delete" onclick="App.deleteQuiz('${quiz.name.replace(/'/g, "\\'")}')">Delete</button>
+                            </div>
+                        `;
+                        els.home.quizList.appendChild(card);
+                    });
+                }
+            };
+
+            const handleFileUpload = async (e) => {
+                if (!DB.isConfigured()) {
+                    alert('ჯერ დააყენეთ API მონაცემები კოდში.');
+                    return;
+                }
+
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const name = file.name.replace('.txt', '');
+                
+                toggleLoader(true);
+                const existing = await DB.get(name);
+                toggleLoader(false);
+
+                if (existing) {
+                    alert('ამ სახელით ქვიზი უკვე არსებობს, წაშალეთ ძველი ან გადაარქვით სახელი ფაილს.');
+                    e.target.value = '';
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    const content = event.target.result;
+                    const parsedData = Parser.parse(content);
+
+                    if (parsedData.length === 0) {
+                        alert("Could not find any valid questions in this file. Please check the format.");
+                        e.target.value = '';
+                        return;
+                    }
+
+                    const quizObj = { name, content, parsedData, timestamp: Date.now() };
+                    
+                    toggleLoader(true);
+                    await DB.save(quizObj);
+                    toggleLoader(false);
+                    
+                    await loadQuizzes();
+                    e.target.value = ''; 
+                };
+                reader.readAsText(file);
+            };
+
+            const deleteQuiz = async (name) => {
+                if (confirm(`ნამდვილად გსურთ წაშალოთ ფაილი "${name}" (წაიშლება ყველასთვის)?`)) {
+                    toggleLoader(true);
+                    await DB.remove(name);
+                    toggleLoader(false);
+                    await loadQuizzes();
+                }
+            };
+
+            const shuffleArray = (array) => {
+                const arr = [...array];
+                for (let i = arr.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [arr[i], arr[j]] = [arr[j], arr[i]];
+                }
+                return arr;
+            };
+
+            const startQuiz = async (name) => {
+                toggleLoader(true);
+                currentQuiz = await DB.get(name);
+                toggleLoader(false);
+
+                if (!currentQuiz) return;
+
+                let qList = [...currentQuiz.parsedData];
+                if (els.home.setRandomize.checked) qList = shuffleArray(qList);
+                if (els.home.setShuffle.checked) {
+                    qList = qList.map(q => {
+                        if (q.type === 'mcq') return { ...q, choices: shuffleArray(q.choices) };
+                        return q;
+                    });
+                }
+
+                questions = qList;
+                userAnswers = new Array(questions.length).fill(null);
+                currentIdx = 0;
+                score = 0;
+
+                els.quiz.title.textContent = currentQuiz.name;
+                els.quiz.score.textContent = `Score: 0`;
+
+                switchView('quiz');
+                renderQuestion();
+            };
+
+            const renderQuestion = () => {
+                const q = questions[currentIdx];
+                const ansState = userAnswers[currentIdx]; 
+
+                els.quiz.counter.textContent = `Question ${currentIdx + 1} of ${questions.length}`;
+                els.quiz.qText.textContent = q.question;
+                els.quiz.progressBar.style.width = `${((currentIdx) / questions.length) * 100}%`;
+                els.quiz.score.textContent = `Score: ${score}`;
+
+                els.quiz.answerArea.innerHTML = '';
+                els.quiz.feedbackArea.innerHTML = '';
+
+                if (q.type === 'text') {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.id = 'text-input-answer';
+                    input.placeholder = 'Type your answer...';
+                    input.autocomplete = 'off';
+                    
+                    const btn = document.createElement('button');
+                    btn.textContent = 'Submit Answer';
+                    btn.className = 'primary';
+                    btn.style.width = '100%';
+                    btn.onclick = () => submitTextAnswer();
+
+                    if (ansState) {
+                        input.value = ansState.submitted;
+                        input.disabled = true;
+                        btn.style.display = 'none';
+                    }
+
+                    els.quiz.answerArea.appendChild(input);
+                    els.quiz.answerArea.appendChild(btn);
+
+                    if (!ansState) setTimeout(() => input.focus(), 50);
+
+                } else if (q.type === 'mcq') {
+                    const container = document.createElement('div');
+                    container.className = 'mcq-choices';
+                    
+                    q.choices.forEach(choice => {
+                        const btn = document.createElement('button');
+                        btn.className = 'mcq-choice';
+                        btn.textContent = choice;
+                        
+                        if (ansState) {
+                            btn.disabled = true;
+                            if (choice === q.correct) btn.classList.add('correct');
+                            else if (choice === ansState.submitted && ansState.status === 'incorrect') {
+                                btn.classList.add('incorrect');
+                            }
+                        } else {
+                            btn.onclick = () => processAnswer(choice, q.correct);
+                        }
+                        container.appendChild(btn);
+                    });
+                    els.quiz.answerArea.appendChild(container);
+                }
+
+                if (ansState) {
+                    const fb = document.createElement('div');
+                    fb.className = `feedback-banner ${ansState.status}`;
+                    if (ansState.status === 'correct') fb.textContent = 'Correct!';
+                    else if (ansState.status === 'incorrect') fb.textContent = `Incorrect. The correct answer is: ${q.correct}`;
+                    else fb.textContent = `Skipped. The correct answer is: ${q.correct}`;
+                    els.quiz.feedbackArea.appendChild(fb);
+                }
+
+                els.quiz.btnPrev.disabled = currentIdx === 0;
+                
+                if (ansState) {
+                    els.quiz.btnSkip.classList.add('hidden');
+                    els.quiz.btnNext.classList.remove('hidden');
+                    if (currentIdx === questions.length - 1) {
+                        els.quiz.btnNext.textContent = 'Finish Quiz';
+                    } else {
+                        els.quiz.btnNext.textContent = 'Next';
+                    }
+                } else {
+                    els.quiz.btnSkip.classList.remove('hidden');
+                    els.quiz.btnNext.classList.add('hidden');
+                    els.quiz.btnNext.textContent = 'Next';
+                }
+
+                els.quiz.flashcard.style.animation = 'none';
+                void els.quiz.flashcard.offsetWidth; 
+                els.quiz.flashcard.style.animation = 'fadeIn 0.4s ease forwards';
+            };
+
+            const submitTextAnswer = () => {
+                const input = document.getElementById('text-input-answer');
+                if (!input || !input.value.trim()) return;
+                processAnswer(input.value.trim(), questions[currentIdx].correct);
+            };
+
+            const processAnswer = (submittedRaw, correctRaw) => {
+                const sub = submittedRaw.toString().toLowerCase().trim();
+                const cor = correctRaw.toString().toLowerCase().trim();
+                const isCorrect = sub === cor;
+
+                if (isCorrect) score++;
+
+                userAnswers[currentIdx] = {
+                    status: isCorrect ? 'correct' : 'incorrect',
+                    submitted: submittedRaw,
+                    correct: correctRaw
+                };
+
+                renderQuestion(); 
+            };
+
+            const skipQuestion = () => {
+                userAnswers[currentIdx] = { status: 'skipped', submitted: '', correct: questions[currentIdx].correct };
+                renderQuestion(); 
+            };
+
+            const nextQuestion = () => {
+                if (currentIdx < questions.length - 1) {
+                    currentIdx++;
+                    renderQuestion();
+                } else endQuiz();
+            };
+
+            const prevQuestion = () => {
+                if (currentIdx > 0) { currentIdx--; renderQuestion(); }
+            };
+
+            const quitQuiz = () => {
+                if (confirm('Are you sure you want to quit the quiz?')) showHome();
+            };
+
+            const endQuiz = () => {
+                let correctCount = 0; let incorrectCount = 0; let skippedCount = 0;
+                const incorrectList = [];
+
+                userAnswers.forEach((ans, idx) => {
+                    if (!ans) {
+                        skippedCount++;
+                        incorrectList.push({ q: questions[idx], ans: { status: 'skipped', submitted: '' } });
+                    }
+                    else if (ans.status === 'correct') correctCount++;
+                    else if (ans.status === 'incorrect') {
+                        incorrectCount++;
+                        incorrectList.push({ q: questions[idx], ans });
+                    }
+                    else if (ans.status === 'skipped') {
+                        skippedCount++;
+                        incorrectList.push({ q: questions[idx], ans });
+                    }
+                });
+
+                document.getElementById('results-score-pct').textContent = `${Math.round((correctCount / questions.length) * 100)}%`;
+                document.getElementById('results-score-abs').textContent = `${correctCount} / ${questions.length}`;
+                document.getElementById('results-correct').textContent = correctCount;
+                document.getElementById('results-incorrect').textContent = incorrectCount;
+                document.getElementById('results-skipped').textContent = skippedCount;
+
+                const reviewList = document.getElementById('review-list');
+                const reviewContainer = document.getElementById('review-container');
+                reviewList.innerHTML = '';
+                
+                if (incorrectList.length === 0) {
+                    reviewContainer.classList.add('hidden');
+                } else {
+                    reviewContainer.classList.remove('hidden');
+                    incorrectList.forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = `review-card ${item.ans.status === 'skipped' ? 'skipped-card' : ''}`;
+                        div.innerHTML = `
+                            <div class="review-q">${item.q.question}</div>
+                            <div class="review-your-ans">Your Answer: ${item.ans.status === 'skipped' ? '<em>Skipped</em>' : item.ans.submitted}</div>
+                            <div class="review-correct-ans">Correct Answer: ${item.q.correct}</div>
+                        `;
+                        reviewList.appendChild(div);
+                    });
+                }
+
+                switchView('results');
+            };
+
+            const retakeQuiz = () => { if (currentQuiz) startQuiz(currentQuiz.name); };
+            const showHome = () => { currentQuiz = null; switchView('home'); };
+
+            const handleKeyboard = (e) => {
+                if (els.views.quiz.classList.contains('hidden')) return;
+                const ansState = userAnswers[currentIdx];
+                const activeTag = document.activeElement.tagName;
+                const isTextInput = activeTag === 'INPUT' || activeTag === 'TEXTAREA';
+
+                if (e.key === 'Enter') {
+                    if (!ansState && questions[currentIdx].type === 'text') submitTextAnswer();
+                    else if (ansState) nextQuestion();
+                }
+                else if (e.key === 'ArrowLeft') {
+                    if (!isTextInput) prevQuestion();
+                }
+                else if (e.key === 'ArrowRight') {
+                    if (!isTextInput) {
+                        if (ansState) nextQuestion(); else skipQuestion();
+                    }
+                }
+            };
+
+            return { init, startQuiz, deleteQuiz, skipQuestion, nextQuestion, prevQuestion, quitQuiz, retakeQuiz, showHome };
+        })();
+
+        window.addEventListener('DOMContentLoaded', App.init);
+    </script>
+</body>
+</html>
