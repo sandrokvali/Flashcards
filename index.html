@@ -515,7 +515,7 @@
             const isConfigured = () => BIN_ID !== 'YOUR_BIN_ID' && API_KEY !== 'YOUR_API_KEY';
 
             const getAll = async () => {
-                if (!isConfigured()) return null; // Returns null to signal unconfigured API
+                if (!isConfigured()) return null;
                 
                 try {
                     const res = await fetch(API_URL, { headers: getHeaders() });
@@ -649,8 +649,7 @@
                     btnPrev: document.getElementById('btn-prev'),
                     btnSkip: document.getElementById('btn-skip'),
                     btnNext: document.getElementById('btn-next')
-                },
-                results: { ... } // Re-using dynamic gets below
+                }
             };
 
             const toggleLoader = (show) => {
@@ -680,7 +679,7 @@
                 const data = await DB.getAll();
                 toggleLoader(false);
 
-                if (data === null) return; // API error or not set
+                if (data === null) return; 
                 quizzes = data;
                 renderQuizList();
             };
