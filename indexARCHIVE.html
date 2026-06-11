@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flashcard Quiz App</title>
+    <title>Flashcard Quiz App (Global Version)</title>
     <style>
         :root {
             /* Dark Mode Color Palette */
@@ -151,6 +151,27 @@
             height: 1.2rem;
             cursor: pointer;
         }
+
+        /* Loading Screen */
+        .loader-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .spinner {
+            width: 50px; height: 50px;
+            border: 5px solid var(--surface);
+            border-top: 5px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
         /* Home View */
         .quiz-list {
@@ -356,8 +377,14 @@
 </head>
 <body>
 
+    <!-- Loading Screen for Global Database sync -->
+    <div id="loader" class="loader-overlay hidden">
+        <div class="spinner"></div>
+        <h3 id="loader-text">იტვირთება მონაცემები...</h3>
+    </div>
+
     <header>
-        <h1>Flashcard Quiz</h1>
+        <h1>Global Flashcard Quiz</h1>
     </header>
 
     <main>
@@ -365,7 +392,7 @@
         <section id="view-home">
             <div class="flex flex-col items-center gap-2" style="background: var(--surface); padding: 2rem; border-radius: var(--radius); border: 1px solid var(--border);">
                 <h2>Upload a New Quiz</h2>
-                <p class="text-muted text-center">Format: .txt file.<br>Use <code>***</code> for questions, <code>**</code> for answers, and <code>*</code> for multiple choice options.</p>
+                <p class="text-muted text-center">ატვირთეთ .txt ფაილი, რომელსაც ყველა მომხმარებელი დაინახავს.</p>
                 <label class="upload-btn">
                     Choose File
                     <input type="file" id="file-upload" accept=".txt">
@@ -374,7 +401,7 @@
 
             <div style="margin-top: 3rem;">
                 <div class="flex justify-between items-center" style="margin-bottom: 1rem;">
-                    <h2>Your Quizzes</h2>
+                    <h2>Global Quizzes</h2>
                 </div>
                 
                 <!-- Global Settings for Quiz -->
@@ -392,7 +419,10 @@
                 <div id="quiz-list" class="quiz-list">
                     <!-- Quiz Cards injected here -->
                 </div>
-                <p id="no-quizzes-msg" class="text-muted text-center hidden" style="margin-top: 2rem;">No quizzes found. Upload one to get started!</p>
+                <p id="no-quizzes-msg" class="text-muted text-center hidden" style="margin-top: 2rem;">არცერთი ქვიზი არ არის ატვირთული.</p>
+                <p id="api-error-msg" class="text-error text-center hidden" style="color: var(--error); margin-top: 2rem; border: 1px solid var(--error); padding: 1rem; border-radius: 8px;">
+                    <strong>ყურადღება:</strong> API კოდები არ არის დაყენებული. გთხოვთ გაეცნოთ ინსტრუქციას და ჩაასწოროთ BIN_ID და API_KEY კოდში.
+                </p>
             </div>
         </section>
 
@@ -412,9 +442,7 @@
                 <div class="question-text" id="question-text">Question goes here?</div>
                 
                 <!-- Dynamic Input Area -->
-                <div id="answer-area">
-                    <!-- Text or MCQ inputs injected here -->
-                </div>
+                <div id="answer-area"></div>
 
                 <!-- Feedback Area -->
                 <div id="feedback-area"></div>
@@ -428,9 +456,6 @@
                     <button id="btn-next" onclick="App.nextQuestion()">Next</button>
                 </div>
             </div>
-            <p class="text-center text-muted" style="margin-top: 1.5rem; font-size: 0.9rem;">
-                Keyboard Shortcuts: [Enter] Submit Text / [←] Prev / [→] Next or Skip
-            </p>
         </section>
 
         <!-- Results View -->
@@ -463,64 +488,80 @@
 
             <div id="review-container">
                 <h3 style="margin-bottom: 1rem;">Review Incorrect Answers</h3>
-                <div class="review-section" id="review-list">
-                    <!-- Review items injected here -->
-                </div>
+                <div class="review-section" id="review-list"></div>
             </div>
         </section>
     </main>
 
     <script>
         /**
-         * IndexedDB Wrapper
+         * Global API Database Wrapper (JSONBin.io)
          */
         const DB = (() => {
-            const DB_NAME = 'QuizAppDB';
-            const DB_VERSION = 1;
-            const STORE_NAME = 'quizzes';
-            let db;
+            // =================================================================
+            // აქ ჩასვით თქვენი მონაცემები JSONBIN.IO-დან!
+            // =================================================================
+            const BIN_ID = '6a2a7a18f5f4af5e29ddaea8'; 
+            const API_KEY = '$2a$10$EFxJFgYsi7t7AJCfCT738e2EwmpkhLTjzYOESIUdkMi4FerUzBbWO'; 
+            // =================================================================
 
-            const init = () => new Promise((resolve, reject) => {
-                const req = indexedDB.open(DB_NAME, DB_VERSION);
-                req.onupgradeneeded = (e) => {
-                    db = e.target.result;
-                    if (!db.objectStoreNames.contains(STORE_NAME)) {
-                        db.createObjectStore(STORE_NAME, { keyPath: 'name' });
-                    }
-                };
-                req.onsuccess = (e) => { db = e.target.result; resolve(); };
-                req.onerror = (e) => reject(e);
+            const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+
+            const getHeaders = () => ({
+                'Content-Type': 'application/json',
+                'X-Master-Key': API_KEY
             });
 
-            const getAll = () => new Promise((resolve, reject) => {
-                const tx = db.transaction(STORE_NAME, 'readonly');
-                const req = tx.objectStore(STORE_NAME).getAll();
-                req.onsuccess = () => resolve(req.result);
-                req.onerror = (e) => reject(e);
-            });
+            const isConfigured = () => BIN_ID !== 'YOUR_BIN_ID' && API_KEY !== 'YOUR_API_KEY';
 
-            const get = (name) => new Promise((resolve, reject) => {
-                const tx = db.transaction(STORE_NAME, 'readonly');
-                const req = tx.objectStore(STORE_NAME).get(name);
-                req.onsuccess = () => resolve(req.result);
-                req.onerror = (e) => reject(e);
-            });
+            const getAll = async () => {
+                if (!isConfigured()) return null;
+                
+                try {
+                    const res = await fetch(API_URL, { headers: getHeaders() });
+                    if (!res.ok) throw new Error('API Request Failed');
+                    const data = await res.json();
+                    return Array.isArray(data.record) ? data.record : [];
+                } catch (e) {
+                    console.error("DB Fetch Error:", e);
+                    return [];
+                }
+            };
 
-            const save = (quizObj) => new Promise((resolve, reject) => {
-                const tx = db.transaction(STORE_NAME, 'readwrite');
-                const req = tx.objectStore(STORE_NAME).put(quizObj);
-                req.onsuccess = () => resolve();
-                req.onerror = (e) => reject(e);
-            });
+            const get = async (name) => {
+                const quizzes = await getAll();
+                if (!quizzes) return null;
+                return quizzes.find(q => q.name === name);
+            };
 
-            const remove = (name) => new Promise((resolve, reject) => {
-                const tx = db.transaction(STORE_NAME, 'readwrite');
-                const req = tx.objectStore(STORE_NAME).delete(name);
-                req.onsuccess = () => resolve();
-                req.onerror = (e) => reject(e);
-            });
+            const save = async (quizObj) => {
+                if (!isConfigured()) return;
+                const quizzes = await getAll() || [];
+                
+                // Remove if already exists to overwrite
+                const filtered = quizzes.filter(q => q.name !== quizObj.name);
+                filtered.push(quizObj);
+                
+                await fetch(API_URL, {
+                    method: 'PUT',
+                    headers: getHeaders(),
+                    body: JSON.stringify(filtered)
+                });
+            };
 
-            return { init, getAll, get, save, remove };
+            const remove = async (name) => {
+                if (!isConfigured()) return;
+                let quizzes = await getAll() || [];
+                quizzes = quizzes.filter(q => q.name !== name);
+                
+                await fetch(API_URL, {
+                    method: 'PUT',
+                    headers: getHeaders(),
+                    body: JSON.stringify(quizzes)
+                });
+            };
+
+            return { isConfigured, getAll, get, save, remove };
         })();
 
         /**
@@ -528,7 +569,6 @@
          */
         const Parser = (() => {
             const parse = (content) => {
-                // Split by ***
                 const blocks = content.split('***').map(b => b.trim()).filter(b => b);
                 const questions = [];
 
@@ -550,7 +590,6 @@
 
                     if (qText.length === 0 || !correct) continue;
 
-                    // Ensure MCQ correct answer is in choices
                     if (choices.length > 0) {
                         const hasCorrectInChoices = choices.some(c => c.toLowerCase() === correct.toLowerCase());
                         if (!hasCorrectInChoices) {
@@ -584,6 +623,7 @@
 
             // DOM Elements
             const els = {
+                loader: document.getElementById('loader'),
                 views: {
                     home: document.getElementById('view-home'),
                     quiz: document.getElementById('view-quiz'),
@@ -593,6 +633,7 @@
                     fileUpload: document.getElementById('file-upload'),
                     quizList: document.getElementById('quiz-list'),
                     noQuizzesMsg: document.getElementById('no-quizzes-msg'),
+                    apiErrorMsg: document.getElementById('api-error-msg'),
                     setRandomize: document.getElementById('setting-randomize'),
                     setShuffle: document.getElementById('setting-shuffle')
                 },
@@ -608,44 +649,38 @@
                     btnPrev: document.getElementById('btn-prev'),
                     btnSkip: document.getElementById('btn-skip'),
                     btnNext: document.getElementById('btn-next')
-                },
-                results: {
-                    scorePct: document.getElementById('results-score-pct'),
-                    scoreAbs: document.getElementById('results-score-abs'),
-                    correct: document.getElementById('results-correct'),
-                    incorrect: document.getElementById('results-incorrect'),
-                    skipped: document.getElementById('results-skipped'),
-                    reviewList: document.getElementById('review-list'),
-                    reviewContainer: document.getElementById('review-container')
                 }
+            };
+
+            const toggleLoader = (show) => {
+                if (show) els.loader.classList.remove('hidden');
+                else els.loader.classList.add('hidden');
             };
 
             // Init
             const init = async () => {
-                try {
-                    await DB.init();
+                els.home.fileUpload.addEventListener('change', handleFileUpload);
+                document.addEventListener('keydown', handleKeyboard);
+                
+                if (!DB.isConfigured()) {
+                    els.home.apiErrorMsg.classList.remove('hidden');
+                } else {
                     await loadQuizzes();
-                    bindEvents();
-                } catch (e) {
-                    console.error("DB Init Error:", e);
-                    alert("Failed to initialize database. Ensure your browser supports IndexedDB.");
                 }
             };
 
-            const bindEvents = () => {
-                els.home.fileUpload.addEventListener('change', handleFileUpload);
-                document.addEventListener('keydown', handleKeyboard);
-            };
-
-            // View Management
             const switchView = (viewName) => {
                 Object.values(els.views).forEach(v => v.classList.add('hidden'));
                 els.views[viewName].classList.remove('hidden');
             };
 
-            // Home Logic
             const loadQuizzes = async () => {
-                quizzes = await DB.getAll();
+                toggleLoader(true);
+                const data = await DB.getAll();
+                toggleLoader(false);
+
+                if (data === null) return; 
+                quizzes = data;
                 renderQuizList();
             };
 
@@ -672,15 +707,22 @@
             };
 
             const handleFileUpload = async (e) => {
+                if (!DB.isConfigured()) {
+                    alert('ჯერ დააყენეთ API მონაცემები კოდში.');
+                    return;
+                }
+
                 const file = e.target.files[0];
                 if (!file) return;
 
                 const name = file.name.replace('.txt', '');
                 
-                // Check dupes
+                toggleLoader(true);
                 const existing = await DB.get(name);
+                toggleLoader(false);
+
                 if (existing) {
-                    alert('A quiz with this name already exists. Delete it first to overwrite.');
+                    alert('ამ სახელით ქვიზი უკვე არსებობს, წაშალეთ ძველი ან გადაარქვით სახელი ფაილს.');
                     e.target.value = '';
                     return;
                 }
@@ -697,21 +739,26 @@
                     }
 
                     const quizObj = { name, content, parsedData, timestamp: Date.now() };
+                    
+                    toggleLoader(true);
                     await DB.save(quizObj);
+                    toggleLoader(false);
+                    
                     await loadQuizzes();
-                    e.target.value = ''; // reset input
+                    e.target.value = ''; 
                 };
                 reader.readAsText(file);
             };
 
             const deleteQuiz = async (name) => {
-                if (confirm(`Are you sure you want to delete "${name}"?`)) {
+                if (confirm(`ნამდვილად გსურთ წაშალოთ ფაილი "${name}" (წაიშლება ყველასთვის)?`)) {
+                    toggleLoader(true);
                     await DB.remove(name);
+                    toggleLoader(false);
                     await loadQuizzes();
                 }
             };
 
-            // Util
             const shuffleArray = (array) => {
                 const arr = [...array];
                 for (let i = arr.length - 1; i > 0; i--) {
@@ -721,22 +768,18 @@
                 return arr;
             };
 
-            // Quiz Logic
             const startQuiz = async (name) => {
+                toggleLoader(true);
                 currentQuiz = await DB.get(name);
+                toggleLoader(false);
+
                 if (!currentQuiz) return;
 
                 let qList = [...currentQuiz.parsedData];
-                
-                if (els.home.setRandomize.checked) {
-                    qList = shuffleArray(qList);
-                }
-
+                if (els.home.setRandomize.checked) qList = shuffleArray(qList);
                 if (els.home.setShuffle.checked) {
                     qList = qList.map(q => {
-                        if (q.type === 'mcq') {
-                            return { ...q, choices: shuffleArray(q.choices) };
-                        }
+                        if (q.type === 'mcq') return { ...q, choices: shuffleArray(q.choices) };
                         return q;
                     });
                 }
@@ -755,20 +798,16 @@
 
             const renderQuestion = () => {
                 const q = questions[currentIdx];
-                const ansState = userAnswers[currentIdx]; // null or object
+                const ansState = userAnswers[currentIdx]; 
 
                 els.quiz.counter.textContent = `Question ${currentIdx + 1} of ${questions.length}`;
                 els.quiz.qText.textContent = q.question;
-                
-                // Progress
                 els.quiz.progressBar.style.width = `${((currentIdx) / questions.length) * 100}%`;
                 els.quiz.score.textContent = `Score: ${score}`;
 
-                // Clear dynamic areas
                 els.quiz.answerArea.innerHTML = '';
                 els.quiz.feedbackArea.innerHTML = '';
 
-                // Render Input
                 if (q.type === 'text') {
                     const input = document.createElement('input');
                     input.type = 'text';
@@ -816,7 +855,6 @@
                     els.quiz.answerArea.appendChild(container);
                 }
 
-                // Render Feedback if answered
                 if (ansState) {
                     const fb = document.createElement('div');
                     fb.className = `feedback-banner ${ansState.status}`;
@@ -826,7 +864,6 @@
                     els.quiz.feedbackArea.appendChild(fb);
                 }
 
-                // Buttons state
                 els.quiz.btnPrev.disabled = currentIdx === 0;
                 
                 if (ansState) {
@@ -843,18 +880,15 @@
                     els.quiz.btnNext.textContent = 'Next';
                 }
 
-                // Re-trigger animation
                 els.quiz.flashcard.style.animation = 'none';
-                void els.quiz.flashcard.offsetWidth; // force reflow
+                void els.quiz.flashcard.offsetWidth; 
                 els.quiz.flashcard.style.animation = 'fadeIn 0.4s ease forwards';
             };
 
             const submitTextAnswer = () => {
                 const input = document.getElementById('text-input-answer');
                 if (!input || !input.value.trim()) return;
-                const val = input.value.trim();
-                const q = questions[currentIdx];
-                processAnswer(val, q.correct);
+                processAnswer(input.value.trim(), questions[currentIdx].correct);
             };
 
             const processAnswer = (submittedRaw, correctRaw) => {
@@ -870,52 +904,35 @@
                     correct: correctRaw
                 };
 
-                renderQuestion(); // Re-render to show feedback and Next button
+                renderQuestion(); 
             };
 
             const skipQuestion = () => {
-                const q = questions[currentIdx];
-                userAnswers[currentIdx] = {
-                    status: 'skipped',
-                    submitted: '',
-                    correct: q.correct
-                };
-                renderQuestion(); // Show correct answer briefly? Actually let's just go next or show feedback.
-                // Prompt: show feedback so user knows the answer if they skipped, then they click Next.
-                // Re-rendering does exactly this.
+                userAnswers[currentIdx] = { status: 'skipped', submitted: '', correct: questions[currentIdx].correct };
+                renderQuestion(); 
             };
 
             const nextQuestion = () => {
                 if (currentIdx < questions.length - 1) {
                     currentIdx++;
                     renderQuestion();
-                } else {
-                    endQuiz();
-                }
+                } else endQuiz();
             };
 
             const prevQuestion = () => {
-                if (currentIdx > 0) {
-                    currentIdx--;
-                    renderQuestion();
-                }
+                if (currentIdx > 0) { currentIdx--; renderQuestion(); }
             };
 
             const quitQuiz = () => {
-                if (confirm('Are you sure you want to quit the quiz? Your progress will be lost.')) {
-                    showHome();
-                }
+                if (confirm('Are you sure you want to quit the quiz?')) showHome();
             };
 
-            // Results Logic
             const endQuiz = () => {
-                let correctCount = 0;
-                let incorrectCount = 0;
-                let skippedCount = 0;
+                let correctCount = 0; let incorrectCount = 0; let skippedCount = 0;
                 const incorrectList = [];
 
                 userAnswers.forEach((ans, idx) => {
-                    if (!ans) { // Treat strictly unanswered as skipped at end just in case
+                    if (!ans) {
                         skippedCount++;
                         incorrectList.push({ q: questions[idx], ans: { status: 'skipped', submitted: '' } });
                     }
@@ -930,18 +947,20 @@
                     }
                 });
 
-                els.results.scorePct.textContent = `${Math.round((correctCount / questions.length) * 100)}%`;
-                els.results.scoreAbs.textContent = `${correctCount} / ${questions.length}`;
-                els.results.correct.textContent = correctCount;
-                els.results.incorrect.textContent = incorrectCount;
-                els.results.skipped.textContent = skippedCount;
+                document.getElementById('results-score-pct').textContent = `${Math.round((correctCount / questions.length) * 100)}%`;
+                document.getElementById('results-score-abs').textContent = `${correctCount} / ${questions.length}`;
+                document.getElementById('results-correct').textContent = correctCount;
+                document.getElementById('results-incorrect').textContent = incorrectCount;
+                document.getElementById('results-skipped').textContent = skippedCount;
 
-                // Render Review
-                els.results.reviewList.innerHTML = '';
+                const reviewList = document.getElementById('review-list');
+                const reviewContainer = document.getElementById('review-container');
+                reviewList.innerHTML = '';
+                
                 if (incorrectList.length === 0) {
-                    els.results.reviewContainer.classList.add('hidden');
+                    reviewContainer.classList.add('hidden');
                 } else {
-                    els.results.reviewContainer.classList.remove('hidden');
+                    reviewContainer.classList.remove('hidden');
                     incorrectList.forEach(item => {
                         const div = document.createElement('div');
                         div.className = `review-card ${item.ans.status === 'skipped' ? 'skipped-card' : ''}`;
@@ -950,67 +969,40 @@
                             <div class="review-your-ans">Your Answer: ${item.ans.status === 'skipped' ? '<em>Skipped</em>' : item.ans.submitted}</div>
                             <div class="review-correct-ans">Correct Answer: ${item.q.correct}</div>
                         `;
-                        els.results.reviewList.appendChild(div);
+                        reviewList.appendChild(div);
                     });
                 }
 
                 switchView('results');
             };
 
-            const retakeQuiz = () => {
-                if (currentQuiz) startQuiz(currentQuiz.name);
-            };
+            const retakeQuiz = () => { if (currentQuiz) startQuiz(currentQuiz.name); };
+            const showHome = () => { currentQuiz = null; switchView('home'); };
 
-            const showHome = () => {
-                currentQuiz = null;
-                switchView('home');
-            };
-
-            // Keyboard Shortcuts
             const handleKeyboard = (e) => {
-                // Only process if in quiz view
                 if (els.views.quiz.classList.contains('hidden')) return;
-
                 const ansState = userAnswers[currentIdx];
                 const activeTag = document.activeElement.tagName;
                 const isTextInput = activeTag === 'INPUT' || activeTag === 'TEXTAREA';
 
                 if (e.key === 'Enter') {
-                    if (!ansState && questions[currentIdx].type === 'text') {
-                        submitTextAnswer();
-                    } else if (ansState) {
-                        nextQuestion();
-                    }
+                    if (!ansState && questions[currentIdx].type === 'text') submitTextAnswer();
+                    else if (ansState) nextQuestion();
                 }
                 else if (e.key === 'ArrowLeft') {
-                    // Prevent overriding text input cursor navigation
                     if (!isTextInput) prevQuestion();
                 }
                 else if (e.key === 'ArrowRight') {
                     if (!isTextInput) {
-                        if (ansState) nextQuestion();
-                        else skipQuestion();
+                        if (ansState) nextQuestion(); else skipQuestion();
                     }
                 }
             };
 
-            // Expose public methods for inline onclick handlers
-            return {
-                init,
-                startQuiz,
-                deleteQuiz,
-                skipQuestion,
-                nextQuestion,
-                prevQuestion,
-                quitQuiz,
-                retakeQuiz,
-                showHome
-            };
+            return { init, startQuiz, deleteQuiz, skipQuestion, nextQuestion, prevQuestion, quitQuiz, retakeQuiz, showHome };
         })();
 
-        // Bootstrap
         window.addEventListener('DOMContentLoaded', App.init);
-
     </script>
 </body>
 </html>
