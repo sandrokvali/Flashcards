@@ -4,9 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flashcard Quiz App</title>
+    
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css"></noscript>
+    
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
     <style>
         :root {
-            /* Dark Mode Color Palette */
             --bg: #121212;
             --surface: #1e1e1e;
             --surface-hover: #2c2c2c;
@@ -22,11 +31,7 @@
             --transition: 0.3s ease;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
             background-color: var(--bg);
@@ -36,9 +41,9 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            text-rendering: optimizeLegibility;
         }
 
-        /* Typography & Utilities */
         h1, h2, h3 { font-weight: 600; margin-bottom: 1rem; }
         .hidden { display: none !important; }
         .text-center { text-align: center; }
@@ -52,298 +57,148 @@
         .gap-2 { gap: 1rem; }
         .gap-3 { gap: 1.5rem; }
         
-        /* Layout */
-        header {
-            padding: 1.5rem 2rem;
-            background-color: var(--surface);
-            border-bottom: 1px solid var(--border);
-            text-align: center;
-        }
+        header { padding: 1.5rem 2rem; background-color: var(--surface); border-bottom: 1px solid var(--border); text-align: center; }
 
-        main {
-            flex: 1;
-            width: 100%;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 2rem;
-            position: relative;
-        }
+        main { flex: 1; width: 100%; max-width: 800px; margin: 0 auto; padding: 2rem; position: relative; }
 
-        /* Buttons & Inputs */
         button {
-            background-color: var(--surface);
-            color: var(--text);
-            border: 1px solid var(--border);
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1rem;
-            transition: all var(--transition);
-            font-family: inherit;
+            background-color: var(--surface); color: var(--text); border: 1px solid var(--border);
+            padding: 0.75rem 1.5rem; border-radius: 8px; cursor: pointer; font-size: 1rem;
+            transition: all var(--transition); font-family: inherit;
         }
 
-        button:hover:not(:disabled) {
-            background-color: var(--surface-hover);
-            border-color: var(--primary);
+        button:hover:not(:disabled) { background-color: var(--surface-hover); border-color: var(--primary); }
+        button.primary { background-color: var(--primary); color: #000; border: none; font-weight: 600; }
+        button.primary:hover:not(:disabled) { background-color: var(--primary-hover); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        input[type="file"] { display: none; }
+
+        .drop-zone {
+            background-color: var(--surface); padding: 3rem 2rem; border-radius: var(--radius);
+            border: 2px dashed var(--border); display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 1rem; transition: all 0.2s ease;
         }
 
-        button.primary {
-            background-color: var(--primary);
-            color: #000;
-            border: none;
-            font-weight: 600;
-        }
-
-        button.primary:hover:not(:disabled) {
-            background-color: var(--primary-hover);
-        }
-
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        input[type="file"] {
-            display: none;
+        .drop-zone.dragover {
+            border-color: var(--primary); background-color: rgba(187, 134, 252, 0.05); transform: scale(1.02);
         }
 
         .upload-btn {
-            display: inline-block;
-            background-color: var(--primary);
-            color: #000;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: background var(--transition);
+            display: inline-block; background-color: var(--primary); color: #000; padding: 0.75rem 1.5rem;
+            border-radius: 8px; cursor: pointer; font-weight: 600; transition: background var(--transition);
         }
         .upload-btn:hover { background-color: var(--primary-hover); }
 
         input[type="text"] {
-            width: 100%;
-            background-color: var(--bg);
-            color: var(--text);
-            border: 1px solid var(--border);
-            padding: 1rem;
-            border-radius: 8px;
-            font-size: 1rem;
-            margin-bottom: 1rem;
-            transition: border var(--transition);
+            width: 100%; background-color: var(--bg); color: var(--text); border: 1px solid var(--border);
+            padding: 1rem; border-radius: 8px; font-size: 1rem; margin-bottom: 1rem; transition: border var(--transition);
         }
+        input[type="text"]:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(187, 134, 252, 0.2); }
 
-        input[type="text"]:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 2px rgba(187, 134, 252, 0.2);
+        .toggle-group { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; cursor: pointer; }
+        .toggle-group input[type="checkbox"] { accent-color: var(--primary); width: 1.2rem; height: 1.2rem; cursor: pointer; }
+
+        .quiz-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; margin-top: 2rem; }
+        
+        .quiz-card {
+            background-color: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+            padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; 
+            transition: transform var(--transition), box-shadow var(--transition);
+            position: relative; /* Essential for absolutely positioning the edit icon */
         }
-
-        /* Toggles */
-        .toggle-group {
+        .quiz-card:hover { transform: translateY(-4px); box-shadow: 0 8px 16px rgba(0,0,0,0.4); border-color: var(--primary); }
+        .quiz-card h3 { margin: 0; font-size: 1.25rem; word-break: break-all; padding-right: 24px; }
+        
+        /* Edit Button Styling */
+        .btn-edit {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted); /* Light gray color */
+            padding: 6px;
+            cursor: pointer;
+            opacity: 0; /* Hidden by default */
+            transition: opacity 0.2s ease, color 0.2s ease;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-            cursor: pointer;
+            justify-content: center;
+            border-radius: 50%;
         }
-        .toggle-group input[type="checkbox"] {
-            accent-color: var(--primary);
-            width: 1.2rem;
-            height: 1.2rem;
-            cursor: pointer;
-        }
+        .quiz-card:hover .btn-edit { opacity: 1; /* Fades in on hover */ }
+        .btn-edit:hover { background-color: var(--surface-hover); color: var(--text); }
+        .btn-edit svg { width: 18px; height: 18px; fill: currentColor; }
 
-        /* Home View */
-        .quiz-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 1rem;
-            margin-top: 2rem;
-        }
-
-        .quiz-card {
-            background-color: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 1.5rem;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            transition: transform var(--transition), box-shadow var(--transition);
-        }
-
-        .quiz-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 16px rgba(0,0,0,0.4);
-            border-color: var(--primary);
-        }
-
-        .quiz-card h3 { margin: 0; font-size: 1.25rem; word-break: break-all; }
-        
-        .quiz-card-actions {
-            display: flex;
-            gap: 0.5rem;
-            margin-top: auto;
-        }
+        .quiz-card-actions { display: flex; gap: 0.5rem; margin-top: auto; }
         .quiz-card-actions button { padding: 0.5rem; flex: 1; }
         .btn-delete { border-color: var(--error) !important; color: var(--error) !important; }
         .btn-delete:hover { background-color: rgba(207, 102, 121, 0.1) !important; }
 
-        /* Quiz View */
-        .quiz-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-            font-size: 1.1rem;
-        }
-
-        .progress-container {
-            width: 100%;
-            height: 8px;
-            background-color: var(--surface);
-            border-radius: 4px;
-            margin-bottom: 2rem;
-            overflow: hidden;
-        }
-
-        .progress-bar {
-            height: 100%;
-            background-color: var(--primary);
-            width: 0%;
-            transition: width 0.4s ease;
-        }
+        .quiz-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; font-size: 1.1rem; }
+        .progress-container { width: 100%; height: 8px; background-color: var(--surface); border-radius: 4px; margin-bottom: 2rem; overflow: hidden; transform: translateZ(0); }
+        .progress-bar { height: 100%; background-color: var(--primary); width: 0%; transition: width 0.4s ease; }
 
         .flashcard {
-            background-color: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 3rem 2rem;
-            min-height: 350px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            animation: fadeIn 0.4s ease forwards;
-            position: relative;
+            background-color: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+            padding: 3rem 2rem; min-height: 350px; display: flex; flex-direction: column; justify-content: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); animation: fadeIn 0.4s ease forwards; position: relative; will-change: transform, opacity;
         }
 
-        .question-text {
-            font-size: 1.5rem;
-            margin-bottom: 2rem;
-            text-align: center;
-            white-space: pre-wrap;
-        }
+        .question-text { font-size: 1.5rem; margin-bottom: 2rem; text-align: center; white-space: pre-wrap; }
+        .mcq-choices { display: flex; flex-direction: column; gap: 0.75rem; }
+        .mcq-choice { text-align: left; padding: 1rem; font-size: 1.1rem; }
+        .mcq-choice.correct { background-color: rgba(76, 175, 80, 0.2); border-color: var(--success); color: var(--success); }
+        .mcq-choice.incorrect { background-color: rgba(207, 102, 121, 0.2); border-color: var(--error); color: var(--error); }
 
-        .mcq-choices {
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-        }
-
-        .mcq-choice {
-            text-align: left;
-            padding: 1rem;
-            font-size: 1.1rem;
-        }
-
-        .mcq-choice.correct {
-            background-color: rgba(76, 175, 80, 0.2);
-            border-color: var(--success);
-            color: var(--success);
-        }
-
-        .mcq-choice.incorrect {
-            background-color: rgba(207, 102, 121, 0.2);
-            border-color: var(--error);
-            color: var(--error);
-        }
-
-        .feedback-banner {
-            margin-top: 1.5rem;
-            padding: 1rem;
-            border-radius: 8px;
-            text-align: center;
-            font-weight: bold;
-            font-size: 1.1rem;
-            animation: slideIn 0.3s ease forwards;
-        }
+        .feedback-banner { margin-top: 1.5rem; padding: 1rem; border-radius: 8px; text-align: center; font-weight: bold; font-size: 1.1rem; animation: slideIn 0.3s ease forwards; }
         .feedback-banner.correct { background-color: rgba(76, 175, 80, 0.2); color: var(--success); }
         .feedback-banner.incorrect { background-color: rgba(207, 102, 121, 0.2); color: var(--error); }
         .feedback-banner.skipped { background-color: rgba(160, 160, 160, 0.2); color: var(--text-muted); }
 
-        .quiz-controls {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 2rem;
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
+        .quiz-controls { display: flex; justify-content: space-between; margin-top: 2rem; flex-wrap: wrap; gap: 1rem; }
+        .nav-buttons { display: flex; gap: 1rem; }
 
-        .nav-buttons {
-            display: flex;
-            gap: 1rem;
-        }
-
-        /* Results View */
-        .results-summary {
-            background-color: var(--surface);
-            border-radius: var(--radius);
-            padding: 2rem;
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-
-        .results-score {
-            font-size: 3.5rem;
-            color: var(--primary);
-            font-weight: bold;
-            margin: 1rem 0;
-        }
-
-        .results-stats {
-            display: flex;
-            justify-content: center;
-            gap: 2rem;
-            margin-bottom: 2rem;
-        }
-
+        .results-summary { background-color: var(--surface); border-radius: var(--radius); padding: 2rem; text-align: center; margin-bottom: 2rem; }
+        .results-score { font-size: 3.5rem; color: var(--primary); font-weight: bold; margin: 1rem 0; }
+        .results-stats { display: flex; justify-content: center; gap: 2rem; margin-bottom: 2rem; }
         .stat-box { display: flex; flex-direction: column; }
         .stat-num { font-size: 1.5rem; font-weight: bold; }
         .stat-num.correct { color: var(--success); }
         .stat-num.incorrect { color: var(--error); }
         .stat-num.skipped { color: var(--text-muted); }
 
-        .review-section {
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-        }
-
-        .review-card {
-            background-color: var(--surface);
-            border-left: 4px solid var(--error);
-            padding: 1.5rem;
-            border-radius: 0 var(--radius) var(--radius) 0;
-        }
+        .review-section { display: flex; flex-direction: column; gap: 1.5rem; }
+        .review-card { background-color: var(--surface); border-left: 4px solid var(--error); padding: 1.5rem; border-radius: 0 var(--radius) var(--radius) 0; }
         .review-card.skipped-card { border-left-color: var(--text-muted); }
-
         .review-q { font-weight: 600; margin-bottom: 0.5rem; font-size: 1.1rem; }
         .review-your-ans { color: var(--error); margin-bottom: 0.25rem; }
         .review-correct-ans { color: var(--success); }
         .review-card.skipped-card .review-your-ans { color: var(--text-muted); }
 
-        /* Animations */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: scale(0.98); }
-            to { opacity: 1; transform: scale(1); }
+        .notification-container {
+            position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 12px; z-index: 9999;
         }
-
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
+        .upload-toast {
+            background-color: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+            padding: 1rem; width: 320px; box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+            animation: slideInLeft 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; overflow: hidden;
         }
+        .upload-toast.fade-out { animation: fadeOutLeft 0.4s ease forwards; }
+        .toast-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .toast-filename { font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%; }
+        .toast-status { font-size: 0.8rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+        .toast-bar-bg { background-color: var(--bg); height: 6px; border-radius: 3px; width: 100%; overflow: hidden; position: relative; }
+        .toast-bar-fill { background-color: var(--primary); height: 100%; width: 0%; transition: width 0.3s ease, background-color 0.3s ease; }
+        .upload-toast.success .toast-bar-fill { background-color: var(--success); }
+        .upload-toast.error .toast-bar-fill { background-color: var(--error); }
+        .upload-toast.error .toast-status { color: var(--error); }
 
-        /* Responsive */
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideInLeft { from { transform: translateX(-120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOutLeft { from { transform: translateX(0); opacity: 1; } to { transform: translateX(-120%); opacity: 0; } }
+
         @media (max-width: 600px) {
             .quiz-controls { flex-direction: column; }
             .nav-buttons { width: 100%; display: flex; justify-content: space-between; }
@@ -351,6 +206,8 @@
             .results-stats { flex-direction: column; gap: 1rem; }
             main { padding: 1rem; }
             .flashcard { padding: 2rem 1rem; }
+            .notification-container { bottom: 10px; left: 10px; right: 10px; }
+            .upload-toast { width: auto; }
         }
     </style>
 </head>
@@ -361,14 +218,14 @@
     </header>
 
     <main>
-        <!-- Home View -->
         <section id="view-home">
-            <div class="flex flex-col items-center gap-2" style="background: var(--surface); padding: 2rem; border-radius: var(--radius); border: 1px solid var(--border);">
-                <h2>Upload a New Quiz</h2>
-                <p class="text-muted text-center">Format: .txt file.<br>Use <code>***</code> for questions, <code>**</code> for answers, and <code>*</code> for multiple choice options.</p>
+            <div id="drop-zone" class="drop-zone">
+                <h2>Upload Quizzes</h2>
+                <p class="text-muted text-center">Drag & Drop multiple .txt files here<br>or click the button below to browse.</p>
+                <p class="text-muted text-center" style="font-size: 0.85rem;">Format: <code>***</code> for questions, <code>**</code> for MCQ answers, <code>-</code> for exact text answers, <code>*</code> for multiple choice options.</p>
                 <label class="upload-btn">
-                    Choose File
-                    <input type="file" id="file-upload" accept=".txt">
+                    Choose Files
+                    <input type="file" id="file-upload" accept=".txt" multiple>
                 </label>
             </div>
 
@@ -377,55 +234,40 @@
                     <h2>Your Quizzes</h2>
                 </div>
                 
-                <!-- Global Settings for Quiz -->
                 <div class="flex gap-3 flex-wrap" style="background: var(--surface); padding: 1rem; border-radius: 8px; border: 1px solid var(--border);">
                     <label class="toggle-group">
-                        <input type="checkbox" id="setting-randomize">
+                        <input type="checkbox" id="setting-randomize" checked>
                         Randomize Question Order
                     </label>
                     <label class="toggle-group">
-                        <input type="checkbox" id="setting-shuffle">
+                        <input type="checkbox" id="setting-shuffle" checked>
                         Shuffle Multiple Choice Answers
                     </label>
                 </div>
 
-                <div id="quiz-list" class="quiz-list">
-                    <!-- Quiz Cards injected here -->
-                </div>
+                <div id="quiz-list" class="quiz-list"></div>
                 <p id="no-quizzes-msg" class="text-muted text-center hidden" style="margin-top: 2rem;">No quizzes found. Upload one to get started!</p>
             </div>
         </section>
 
-        <!-- Quiz View -->
         <section id="view-quiz" class="hidden">
             <div class="quiz-header">
                 <span id="quiz-title-display">Quiz Name</span>
                 <span id="quiz-score-display">Score: 0</span>
             </div>
-
-            <div class="progress-container">
-                <div class="progress-bar" id="progress-bar"></div>
-            </div>
-
+            <div class="progress-container"><div class="progress-bar" id="progress-bar"></div></div>
             <div class="flashcard" id="flashcard-container">
                 <div class="text-muted text-center" style="margin-bottom: 1rem;" id="question-counter">Question 1 of 10</div>
                 <div class="question-text" id="question-text">Question goes here?</div>
-                
-                <!-- Dynamic Input Area -->
-                <div id="answer-area">
-                    <!-- Text or MCQ inputs injected here -->
-                </div>
-
-                <!-- Feedback Area -->
+                <div id="answer-area"></div>
                 <div id="feedback-area"></div>
             </div>
-
             <div class="quiz-controls">
-                <button id="btn-quit" onclick="App.quitQuiz()">Quit Quiz</button>
+                <button id="btn-quit" onclick="window.App.quitQuiz()">Quit Quiz</button>
                 <div class="nav-buttons">
-                    <button id="btn-prev" onclick="App.prevQuestion()">Prev</button>
-                    <button id="btn-skip" onclick="App.skipQuestion()">Skip</button>
-                    <button id="btn-next" onclick="App.nextQuestion()">Next</button>
+                    <button id="btn-prev" onclick="window.App.prevQuestion()">Prev</button>
+                    <button id="btn-skip" onclick="window.App.skipQuestion()">Skip</button>
+                    <button id="btn-next" onclick="window.App.nextQuestion()">Next</button>
                 </div>
             </div>
             <p class="text-center text-muted" style="margin-top: 1.5rem; font-size: 0.9rem;">
@@ -433,136 +275,95 @@
             </p>
         </section>
 
-        <!-- Results View -->
         <section id="view-results" class="hidden">
             <div class="results-summary">
                 <h2>Quiz Completed!</h2>
                 <div class="results-score" id="results-score-pct">100%</div>
                 <p style="font-size: 1.2rem; margin-bottom: 2rem;">Final Score: <span id="results-score-abs"></span></p>
-
                 <div class="results-stats">
-                    <div class="stat-box">
-                        <span class="stat-num correct" id="results-correct">0</span>
-                        <span>Correct</span>
-                    </div>
-                    <div class="stat-box">
-                        <span class="stat-num incorrect" id="results-incorrect">0</span>
-                        <span>Incorrect</span>
-                    </div>
-                    <div class="stat-box">
-                        <span class="stat-num skipped" id="results-skipped">0</span>
-                        <span>Skipped</span>
-                    </div>
+                    <div class="stat-box"><span class="stat-num correct" id="results-correct">0</span><span>Correct</span></div>
+                    <div class="stat-box"><span class="stat-num incorrect" id="results-incorrect">0</span><span>Incorrect</span></div>
+                    <div class="stat-box"><span class="stat-num skipped" id="results-skipped">0</span><span>Skipped</span></div>
                 </div>
-
                 <div class="flex justify-center gap-2 mt-2">
-                    <button class="primary" onclick="App.retakeQuiz()">Retake Quiz</button>
-                    <button onclick="App.showHome()">Return Home</button>
+                    <button class="primary" onclick="window.App.retakeQuiz()">Retake Quiz</button>
+                    <button onclick="window.App.showHome()">Return Home</button>
                 </div>
             </div>
-
             <div id="review-container">
                 <h3 style="margin-bottom: 1rem;">Review Incorrect Answers</h3>
-                <div class="review-section" id="review-list">
-                    <!-- Review items injected here -->
-                </div>
+                <div class="review-section" id="review-list"></div>
             </div>
         </section>
     </main>
 
-    <script>
-        /**
-         * IndexedDB Wrapper
-         */
+    <div id="notification-container" class="notification-container"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getFirestore, collection, doc, setDoc, deleteDoc, getDoc, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        const renderMath = (element) => {
+            if (typeof renderMathInElement !== 'undefined') {
+                renderMathInElement(element, { delimiters: [ {left: "$$", right: "$$", display: true}, {left: "\\[", right: "\\]", display: true}, {left: "$", right: "$", display: false}, {left: "\\(", right: "\\)", display: false} ], throwOnError: false });
+            }
+        };
+
         const DB = (() => {
-            const DB_NAME = 'QuizAppDB';
-            const DB_VERSION = 1;
-            const STORE_NAME = 'quizzes';
+            const firebaseConfig = { apiKey: "AIzaSyAFQLqwVm8VxgBH8D8ubwarFCKaDkCcuQk", authDomain: "flashcards-3faea.firebaseapp.com", databaseURL: "https://flashcards-3faea-default-rtdb.europe-west1.firebasedatabase.app", projectId: "flashcards-3faea", storageBucket: "flashcards-3faea.firebasestorage.app", messagingSenderId: "530389763322", appId: "1:530389763322:web:49fe73f56d5ac8df737543", measurementId: "G-FDQYP2MPQY" };
             let db;
+            const STORE_NAME = 'quizzes';
 
-            const init = () => new Promise((resolve, reject) => {
-                const req = indexedDB.open(DB_NAME, DB_VERSION);
-                req.onupgradeneeded = (e) => {
-                    db = e.target.result;
-                    if (!db.objectStoreNames.contains(STORE_NAME)) {
-                        db.createObjectStore(STORE_NAME, { keyPath: 'name' });
-                    }
-                };
-                req.onsuccess = (e) => { db = e.target.result; resolve(); };
-                req.onerror = (e) => reject(e);
-            });
+            const init = () => {
+                const app = initializeApp(firebaseConfig);
+                db = initializeFirestore(app, { localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()}) });
+            };
 
-            const getAll = () => new Promise((resolve, reject) => {
-                const tx = db.transaction(STORE_NAME, 'readonly');
-                const req = tx.objectStore(STORE_NAME).getAll();
-                req.onsuccess = () => resolve(req.result);
-                req.onerror = (e) => reject(e);
-            });
+            const listenAll = (callback) => {
+                return onSnapshot(collection(db, STORE_NAME), (snapshot) => {
+                    const quizzes = [];
+                    snapshot.forEach(doc => quizzes.push(doc.data()));
+                    callback(quizzes);
+                });
+            };
 
-            const get = (name) => new Promise((resolve, reject) => {
-                const tx = db.transaction(STORE_NAME, 'readonly');
-                const req = tx.objectStore(STORE_NAME).get(name);
-                req.onsuccess = () => resolve(req.result);
-                req.onerror = (e) => reject(e);
-            });
+            const get = async (name) => {
+                const docRef = await getDoc(doc(db, STORE_NAME, name));
+                return docRef.exists() ? docRef.data() : null;
+            };
 
-            const save = (quizObj) => new Promise((resolve, reject) => {
-                const tx = db.transaction(STORE_NAME, 'readwrite');
-                const req = tx.objectStore(STORE_NAME).put(quizObj);
-                req.onsuccess = () => resolve();
-                req.onerror = (e) => reject(e);
-            });
+            const save = async (quizObj) => await setDoc(doc(db, STORE_NAME, quizObj.name), quizObj);
+            const remove = async (name) => await deleteDoc(doc(db, STORE_NAME, name));
 
-            const remove = (name) => new Promise((resolve, reject) => {
-                const tx = db.transaction(STORE_NAME, 'readwrite');
-                const req = tx.objectStore(STORE_NAME).delete(name);
-                req.onsuccess = () => resolve();
-                req.onerror = (e) => reject(e);
-            });
-
-            return { init, getAll, get, save, remove };
+            return { init, listenAll, get, save, remove };
         })();
 
-        /**
-         * Quiz Parser
-         */
         const Parser = (() => {
             const parse = (content) => {
-                // Split by ***
                 const blocks = content.split('***').map(b => b.trim()).filter(b => b);
                 const questions = [];
-
                 for (const block of blocks) {
                     const lines = block.split('\n').map(l => l.trim()).filter(l => l);
-                    const qText = [];
-                    const choices = [];
-                    let correct = null;
+                    const qText = [], choices = [];
+                    let correct = null, isTextInput = false;
 
                     for (const line of lines) {
-                        if (line.startsWith('**')) {
-                            correct = line.substring(2).trim();
-                        } else if (line.startsWith('*')) {
-                            choices.push(line.substring(1).trim());
-                        } else {
-                            qText.push(line);
-                        }
+                        if (line.startsWith('**')) correct = line.substring(2).trim();
+                        else if (line.startsWith('*')) choices.push(line.substring(1).trim());
+                        else if (line.startsWith('-')) { correct = line.substring(1).trim(); isTextInput = true; }
+                        else qText.push(line);
                     }
 
                     if (qText.length === 0 || !correct) continue;
-
-                    // Ensure MCQ correct answer is in choices
-                    if (choices.length > 0) {
-                        const hasCorrectInChoices = choices.some(c => c.toLowerCase() === correct.toLowerCase());
-                        if (!hasCorrectInChoices) {
-                            choices.push(correct);
-                        }
+                    if (!isTextInput && choices.length > 0) {
+                        if (!choices.some(c => c.toLowerCase() === correct.toLowerCase())) choices.push(correct);
                     }
 
                     questions.push({
                         question: qText.join('\n'),
-                        choices: choices.length > 0 ? [...new Set(choices)] : null,
+                        choices: choices.length > 0 && !isTextInput ? [...new Set(choices)] : null,
                         correct: correct,
-                        type: choices.length > 0 ? 'mcq' : 'text'
+                        type: isTextInput || choices.length === 0 ? 'text' : 'mcq'
                     });
                 }
                 return questions;
@@ -570,148 +371,182 @@
             return { parse };
         })();
 
-        /**
-         * Main Application Logic
-         */
-        const App = (() => {
-            // State
-            let quizzes = [];
-            let currentQuiz = null;
-            let questions = [];
-            let userAnswers = [];
-            let currentIdx = 0;
-            let score = 0;
+        const ToastManager = (() => {
+            const container = document.getElementById('notification-container');
+            const create = (id, filename) => {
+                const toast = document.createElement('div');
+                toast.className = 'upload-toast'; toast.id = id;
+                toast.innerHTML = `
+                    <div class="toast-header"><span class="toast-filename">${filename}</span><span class="toast-status" id="${id}-status">0%</span></div>
+                    <div class="toast-bar-bg"><div class="toast-bar-fill" id="${id}-bar"></div></div>
+                `;
+                container.appendChild(toast);
+            };
+            const update = (id, percentage, statusText, state = 'processing') => {
+                const toast = document.getElementById(id);
+                if (!toast) return;
+                document.getElementById(`${id}-bar`).style.width = `${percentage}%`;
+                document.getElementById(`${id}-status`).textContent = statusText;
+                if (state === 'success') toast.classList.add('success');
+                if (state === 'error') toast.classList.add('error');
+            };
+            const remove = (id) => {
+                const toast = document.getElementById(id);
+                if (!toast) return;
+                toast.classList.add('fade-out');
+                setTimeout(() => toast.remove(), 400); 
+            };
+            return { create, update, remove };
+        })();
 
-            // DOM Elements
+        const App = (() => {
+            let quizzes = [], currentQuiz = null, questions = [], userAnswers = [], currentIdx = 0, score = 0;
+
             const els = {
-                views: {
-                    home: document.getElementById('view-home'),
-                    quiz: document.getElementById('view-quiz'),
-                    results: document.getElementById('view-results')
-                },
-                home: {
-                    fileUpload: document.getElementById('file-upload'),
-                    quizList: document.getElementById('quiz-list'),
-                    noQuizzesMsg: document.getElementById('no-quizzes-msg'),
-                    setRandomize: document.getElementById('setting-randomize'),
-                    setShuffle: document.getElementById('setting-shuffle')
-                },
-                quiz: {
-                    title: document.getElementById('quiz-title-display'),
-                    score: document.getElementById('quiz-score-display'),
-                    progressBar: document.getElementById('progress-bar'),
-                    flashcard: document.getElementById('flashcard-container'),
-                    counter: document.getElementById('question-counter'),
-                    qText: document.getElementById('question-text'),
-                    answerArea: document.getElementById('answer-area'),
-                    feedbackArea: document.getElementById('feedback-area'),
-                    btnPrev: document.getElementById('btn-prev'),
-                    btnSkip: document.getElementById('btn-skip'),
-                    btnNext: document.getElementById('btn-next')
-                },
-                results: {
-                    scorePct: document.getElementById('results-score-pct'),
-                    scoreAbs: document.getElementById('results-score-abs'),
-                    correct: document.getElementById('results-correct'),
-                    incorrect: document.getElementById('results-incorrect'),
-                    skipped: document.getElementById('results-skipped'),
-                    reviewList: document.getElementById('review-list'),
-                    reviewContainer: document.getElementById('review-container')
-                }
+                views: { home: document.getElementById('view-home'), quiz: document.getElementById('view-quiz'), results: document.getElementById('view-results') },
+                home: { fileUpload: document.getElementById('file-upload'), dropZone: document.getElementById('drop-zone'), quizList: document.getElementById('quiz-list'), noQuizzesMsg: document.getElementById('no-quizzes-msg'), setRandomize: document.getElementById('setting-randomize'), setShuffle: document.getElementById('setting-shuffle') },
+                quiz: { title: document.getElementById('quiz-title-display'), score: document.getElementById('quiz-score-display'), progressBar: document.getElementById('progress-bar'), flashcard: document.getElementById('flashcard-container'), counter: document.getElementById('question-counter'), qText: document.getElementById('question-text'), answerArea: document.getElementById('answer-area'), feedbackArea: document.getElementById('feedback-area'), btnPrev: document.getElementById('btn-prev'), btnSkip: document.getElementById('btn-skip'), btnNext: document.getElementById('btn-next') },
+                results: { scorePct: document.getElementById('results-score-pct'), scoreAbs: document.getElementById('results-score-abs'), correct: document.getElementById('results-correct'), incorrect: document.getElementById('results-incorrect'), skipped: document.getElementById('results-skipped'), reviewList: document.getElementById('review-list'), reviewContainer: document.getElementById('review-container') }
             };
 
-            // Init
-            const init = async () => {
+            const init = () => {
                 try {
-                    await DB.init();
-                    await loadQuizzes();
-                    bindEvents();
+                    DB.init();
+                    DB.listenAll((data) => {
+                        quizzes = data;
+                        renderQuizList();
+                    });
+                    
+                    els.home.dropZone.addEventListener('dragover', (e) => { e.preventDefault(); els.home.dropZone.classList.add('dragover'); });
+                    els.home.dropZone.addEventListener('dragleave', () => { els.home.dropZone.classList.remove('dragover'); });
+                    
+                    els.home.dropZone.addEventListener('drop', (e) => {
+                        e.preventDefault();
+                        els.home.dropZone.classList.remove('dragover');
+                        if (e.dataTransfer.files.length) processMultipleFiles(e.dataTransfer.files);
+                    });
+
+                    els.home.fileUpload.addEventListener('change', (e) => {
+                        if (e.target.files.length) processMultipleFiles(e.target.files);
+                        e.target.value = ''; 
+                    });
+
+                    document.addEventListener('keydown', handleKeyboard);
                 } catch (e) {
                     console.error("DB Init Error:", e);
-                    alert("Failed to initialize database. Ensure your browser supports IndexedDB.");
                 }
             };
 
-            const bindEvents = () => {
-                els.home.fileUpload.addEventListener('change', handleFileUpload);
-                document.addEventListener('keydown', handleKeyboard);
-            };
-
-            // View Management
             const switchView = (viewName) => {
                 Object.values(els.views).forEach(v => v.classList.add('hidden'));
                 els.views[viewName].classList.remove('hidden');
             };
 
-            // Home Logic
-            const loadQuizzes = async () => {
-                quizzes = await DB.getAll();
-                renderQuizList();
-            };
-
             const renderQuizList = () => {
-                els.home.quizList.innerHTML = '';
+                els.home.quizList.replaceChildren(); 
                 if (quizzes.length === 0) {
                     els.home.noQuizzesMsg.classList.remove('hidden');
                 } else {
                     els.home.noQuizzesMsg.classList.add('hidden');
+                    const frag = document.createDocumentFragment(); 
                     quizzes.forEach(quiz => {
                         const card = document.createElement('div');
                         card.className = 'quiz-card';
+                        
+                        // Added Edit button icon SVG to the card
                         card.innerHTML = `
+                            <button class="btn-edit" onclick="window.App.renameQuiz('${quiz.name.replace(/'/g, "\\'")}')" title="Rename Quiz">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                                </svg>
+                            </button>
                             <h3>${quiz.name}</h3>
                             <p class="text-muted">${quiz.parsedData.length} Questions</p>
                             <div class="quiz-card-actions">
-                                <button class="primary" onclick="App.startQuiz('${quiz.name.replace(/'/g, "\\'")}')">Start</button>
-                                <button class="btn-delete" onclick="App.deleteQuiz('${quiz.name.replace(/'/g, "\\'")}')">Delete</button>
+                                <button class="primary" onclick="window.App.startQuiz('${quiz.name.replace(/'/g, "\\'")}')">Start</button>
+                                <button class="btn-delete" onclick="window.App.deleteQuiz('${quiz.name.replace(/'/g, "\\'")}')">Delete</button>
                             </div>
                         `;
-                        els.home.quizList.appendChild(card);
+                        frag.appendChild(card);
                     });
+                    els.home.quizList.appendChild(frag);
                 }
             };
 
-            const handleFileUpload = async (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
+            const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-                const name = file.name.replace('.txt', '');
+            const processMultipleFiles = (files) => {
+                const fileList = Array.from(files);
+                const txtFiles = fileList.filter(f => f.name.toLowerCase().endsWith('.txt'));
+
+                if (txtFiles.length !== fileList.length) alert('Some ignored: Only .txt files are accepted.');
+                txtFiles.forEach(file => uploadSingleFileWithProgress(file));
+            };
+
+            const uploadSingleFileWithProgress = async (file) => {
+                const toastId = 'toast-' + Math.random().toString(36).substr(2, 9);
+                ToastManager.create(toastId, file.name);
+
+                try {
+                    ToastManager.update(toastId, 25, "Reading...");
+                    await sleep(150); 
+                    const content = await file.text();
+                    
+                    ToastManager.update(toastId, 50, "Parsing...");
+                    await sleep(150);
+                    const parsedData = Parser.parse(content);
+                    if (parsedData.length === 0) throw new Error("Format Invalid");
+
+                    const name = file.name.replace(/\.txt$/i, '');
+                    
+                    ToastManager.update(toastId, 75, "Checking Data...");
+                    const existing = quizzes.find(q => q.name === name) || await DB.get(name); 
+                    if (existing) throw new Error("Already Exists");
+
+                    ToastManager.update(toastId, 90, "Saving...");
+                    await DB.save({ name, content, parsedData, timestamp: Date.now() });
+
+                    ToastManager.update(toastId, 100, "Done!", "success");
+                    setTimeout(() => ToastManager.remove(toastId), 3000);
+
+                } catch (error) {
+                    ToastManager.update(toastId, 100, error.message, "error");
+                    setTimeout(() => ToastManager.remove(toastId), 4000); 
+                }
+            };
+
+            // NEW: Rename Functionality
+            const renameQuiz = async (oldName) => {
+                const newName = prompt(`Rename "${oldName}" to:`, oldName);
+                if (!newName || newName === oldName || !newName.trim()) return;
                 
-                // Check dupes
-                const existing = await DB.get(name);
+                const cleanNewName = newName.trim();
+                const existing = quizzes.find(q => q.name === cleanNewName) || await DB.get(cleanNewName);
+                
                 if (existing) {
-                    alert('A quiz with this name already exists. Delete it first to overwrite.');
-                    e.target.value = '';
+                    alert('A quiz with this name already exists.');
                     return;
                 }
 
-                const reader = new FileReader();
-                reader.onload = async (event) => {
-                    const content = event.target.result;
-                    const parsedData = Parser.parse(content);
+                try {
+                    const oldQuiz = quizzes.find(q => q.name === oldName) || await DB.get(oldName);
+                    if (!oldQuiz) return;
 
-                    if (parsedData.length === 0) {
-                        alert("Could not find any valid questions in this file. Please check the format.");
-                        e.target.value = '';
-                        return;
-                    }
-
-                    const quizObj = { name, content, parsedData, timestamp: Date.now() };
-                    await DB.save(quizObj);
-                    await loadQuizzes();
-                    e.target.value = ''; // reset input
-                };
-                reader.readAsText(file);
-            };
-
-            const deleteQuiz = async (name) => {
-                if (confirm(`Are you sure you want to delete "${name}"?`)) {
-                    await DB.remove(name);
-                    await loadQuizzes();
+                    // Because document ID = name in Firestore, we create a new one and delete the old
+                    const updatedQuiz = { ...oldQuiz, name: cleanNewName };
+                    await DB.save(updatedQuiz);
+                    await DB.remove(oldName);
+                    
+                } catch (e) {
+                    console.error("Rename failed:", e);
+                    alert("Failed to rename quiz.");
                 }
             };
 
-            // Util
+            const deleteQuiz = async (name) => {
+                if (confirm(`Are you sure you want to delete "${name}"?`)) await DB.remove(name);
+            };
+
             const shuffleArray = (array) => {
                 const arr = [...array];
                 for (let i = arr.length - 1; i > 0; i--) {
@@ -721,30 +556,19 @@
                 return arr;
             };
 
-            // Quiz Logic
             const startQuiz = async (name) => {
-                currentQuiz = await DB.get(name);
+                currentQuiz = quizzes.find(q => q.name === name) || await DB.get(name);
                 if (!currentQuiz) return;
 
                 let qList = [...currentQuiz.parsedData];
-                
-                if (els.home.setRandomize.checked) {
-                    qList = shuffleArray(qList);
-                }
-
+                if (els.home.setRandomize.checked) qList = shuffleArray(qList);
                 if (els.home.setShuffle.checked) {
-                    qList = qList.map(q => {
-                        if (q.type === 'mcq') {
-                            return { ...q, choices: shuffleArray(q.choices) };
-                        }
-                        return q;
-                    });
+                    qList = qList.map(q => q.type === 'mcq' ? { ...q, choices: shuffleArray(q.choices) } : q);
                 }
 
                 questions = qList;
                 userAnswers = new Array(questions.length).fill(null);
-                currentIdx = 0;
-                score = 0;
+                currentIdx = 0; score = 0;
 
                 els.quiz.title.textContent = currentQuiz.name;
                 els.quiz.score.textContent = `Score: 0`;
@@ -755,193 +579,111 @@
 
             const renderQuestion = () => {
                 const q = questions[currentIdx];
-                const ansState = userAnswers[currentIdx]; // null or object
+                const ansState = userAnswers[currentIdx];
 
                 els.quiz.counter.textContent = `Question ${currentIdx + 1} of ${questions.length}`;
                 els.quiz.qText.textContent = q.question;
-                
-                // Progress
                 els.quiz.progressBar.style.width = `${((currentIdx) / questions.length) * 100}%`;
                 els.quiz.score.textContent = `Score: ${score}`;
+                
+                els.quiz.answerArea.replaceChildren(); 
+                els.quiz.feedbackArea.replaceChildren();
 
-                // Clear dynamic areas
-                els.quiz.answerArea.innerHTML = '';
-                els.quiz.feedbackArea.innerHTML = '';
-
-                // Render Input
                 if (q.type === 'text') {
                     const input = document.createElement('input');
-                    input.type = 'text';
-                    input.id = 'text-input-answer';
-                    input.placeholder = 'Type your answer...';
-                    input.autocomplete = 'off';
+                    input.type = 'text'; input.id = 'text-input-answer'; input.placeholder = 'Type your answer...'; input.autocomplete = 'off';
                     
                     const btn = document.createElement('button');
-                    btn.textContent = 'Submit Answer';
-                    btn.className = 'primary';
-                    btn.style.width = '100%';
+                    btn.textContent = 'Submit Answer'; btn.className = 'primary'; btn.style.width = '100%';
                     btn.onclick = () => submitTextAnswer();
 
-                    if (ansState) {
-                        input.value = ansState.submitted;
-                        input.disabled = true;
-                        btn.style.display = 'none';
-                    }
-
-                    els.quiz.answerArea.appendChild(input);
-                    els.quiz.answerArea.appendChild(btn);
-
+                    if (ansState) { input.value = ansState.submitted; input.disabled = true; btn.style.display = 'none'; }
+                    els.quiz.answerArea.append(input, btn);
                     if (!ansState) setTimeout(() => input.focus(), 50);
 
                 } else if (q.type === 'mcq') {
-                    const container = document.createElement('div');
-                    container.className = 'mcq-choices';
-                    
+                    const container = document.createElement('div'); container.className = 'mcq-choices';
+                    const frag = document.createDocumentFragment();
+
                     q.choices.forEach(choice => {
                         const btn = document.createElement('button');
-                        btn.className = 'mcq-choice';
-                        btn.textContent = choice;
+                        btn.className = 'mcq-choice'; btn.textContent = choice;
                         
                         if (ansState) {
                             btn.disabled = true;
                             if (choice === q.correct) btn.classList.add('correct');
-                            else if (choice === ansState.submitted && ansState.status === 'incorrect') {
-                                btn.classList.add('incorrect');
-                            }
+                            else if (choice === ansState.submitted && ansState.status === 'incorrect') btn.classList.add('incorrect');
                         } else {
                             btn.onclick = () => processAnswer(choice, q.correct);
                         }
-                        container.appendChild(btn);
+                        frag.appendChild(btn);
                     });
+                    container.appendChild(frag);
                     els.quiz.answerArea.appendChild(container);
                 }
 
-                // Render Feedback if answered
                 if (ansState) {
                     const fb = document.createElement('div');
                     fb.className = `feedback-banner ${ansState.status}`;
-                    if (ansState.status === 'correct') fb.textContent = 'Correct!';
-                    else if (ansState.status === 'incorrect') fb.textContent = `Incorrect. The correct answer is: ${q.correct}`;
-                    else fb.textContent = `Skipped. The correct answer is: ${q.correct}`;
+                    fb.textContent = ansState.status === 'correct' ? 'Correct!' : (ansState.status === 'incorrect' ? `Incorrect. The correct answer is: ${q.correct}` : `Skipped. The correct answer is: ${q.correct}`);
                     els.quiz.feedbackArea.appendChild(fb);
                 }
 
-                // Buttons state
                 els.quiz.btnPrev.disabled = currentIdx === 0;
                 
                 if (ansState) {
-                    els.quiz.btnSkip.classList.add('hidden');
-                    els.quiz.btnNext.classList.remove('hidden');
-                    if (currentIdx === questions.length - 1) {
-                        els.quiz.btnNext.textContent = 'Finish Quiz';
-                    } else {
-                        els.quiz.btnNext.textContent = 'Next';
-                    }
+                    els.quiz.btnSkip.classList.add('hidden'); els.quiz.btnNext.classList.remove('hidden');
+                    els.quiz.btnNext.textContent = currentIdx === questions.length - 1 ? 'Finish Quiz' : 'Next';
                 } else {
-                    els.quiz.btnSkip.classList.remove('hidden');
-                    els.quiz.btnNext.classList.add('hidden');
-                    els.quiz.btnNext.textContent = 'Next';
+                    els.quiz.btnSkip.classList.remove('hidden'); els.quiz.btnNext.classList.add('hidden'); els.quiz.btnNext.textContent = 'Next';
                 }
 
-                // Re-trigger animation
                 els.quiz.flashcard.style.animation = 'none';
-                void els.quiz.flashcard.offsetWidth; // force reflow
+                void els.quiz.flashcard.offsetWidth; 
                 els.quiz.flashcard.style.animation = 'fadeIn 0.4s ease forwards';
+                
+                renderMath(els.quiz.qText);
+                renderMath(els.quiz.answerArea);
             };
 
             const submitTextAnswer = () => {
                 const input = document.getElementById('text-input-answer');
                 if (!input || !input.value.trim()) return;
-                const val = input.value.trim();
-                const q = questions[currentIdx];
-                processAnswer(val, q.correct);
+                processAnswer(input.value.trim(), questions[currentIdx].correct);
             };
 
             const processAnswer = (submittedRaw, correctRaw) => {
-                const sub = submittedRaw.toString().toLowerCase().trim();
-                const cor = correctRaw.toString().toLowerCase().trim();
-                const isCorrect = sub === cor;
-
+                const isCorrect = submittedRaw.toString().toLowerCase().trim() === correctRaw.toString().toLowerCase().trim();
                 if (isCorrect) score++;
-
-                userAnswers[currentIdx] = {
-                    status: isCorrect ? 'correct' : 'incorrect',
-                    submitted: submittedRaw,
-                    correct: correctRaw
-                };
-
-                renderQuestion(); // Re-render to show feedback and Next button
+                userAnswers[currentIdx] = { status: isCorrect ? 'correct' : 'incorrect', submitted: submittedRaw, correct: correctRaw };
+                renderQuestion();
             };
 
-            const skipQuestion = () => {
-                const q = questions[currentIdx];
-                userAnswers[currentIdx] = {
-                    status: 'skipped',
-                    submitted: '',
-                    correct: q.correct
-                };
-                renderQuestion(); // Show correct answer briefly? Actually let's just go next or show feedback.
-                // Prompt: show feedback so user knows the answer if they skipped, then they click Next.
-                // Re-rendering does exactly this.
-            };
+            const skipQuestion = () => { userAnswers[currentIdx] = { status: 'skipped', submitted: '', correct: questions[currentIdx].correct }; renderQuestion(); };
+            const nextQuestion = () => { currentIdx < questions.length - 1 ? (currentIdx++, renderQuestion()) : endQuiz(); };
+            const prevQuestion = () => { if (currentIdx > 0) { currentIdx--; renderQuestion(); } };
+            const quitQuiz = () => { if (confirm('Are you sure you want to quit the quiz? Your progress will be lost.')) showHome(); };
 
-            const nextQuestion = () => {
-                if (currentIdx < questions.length - 1) {
-                    currentIdx++;
-                    renderQuestion();
-                } else {
-                    endQuiz();
-                }
-            };
-
-            const prevQuestion = () => {
-                if (currentIdx > 0) {
-                    currentIdx--;
-                    renderQuestion();
-                }
-            };
-
-            const quitQuiz = () => {
-                if (confirm('Are you sure you want to quit the quiz? Your progress will be lost.')) {
-                    showHome();
-                }
-            };
-
-            // Results Logic
             const endQuiz = () => {
-                let correctCount = 0;
-                let incorrectCount = 0;
-                let skippedCount = 0;
+                let correctCount = 0, incorrectCount = 0, skippedCount = 0;
                 const incorrectList = [];
 
                 userAnswers.forEach((ans, idx) => {
-                    if (!ans) { // Treat strictly unanswered as skipped at end just in case
-                        skippedCount++;
-                        incorrectList.push({ q: questions[idx], ans: { status: 'skipped', submitted: '' } });
-                    }
+                    if (!ans) { skippedCount++; incorrectList.push({ q: questions[idx], ans: { status: 'skipped', submitted: '' } }); }
                     else if (ans.status === 'correct') correctCount++;
-                    else if (ans.status === 'incorrect') {
-                        incorrectCount++;
-                        incorrectList.push({ q: questions[idx], ans });
-                    }
-                    else if (ans.status === 'skipped') {
-                        skippedCount++;
-                        incorrectList.push({ q: questions[idx], ans });
-                    }
+                    else { (ans.status === 'skipped' ? skippedCount++ : incorrectCount++); incorrectList.push({ q: questions[idx], ans }); }
                 });
 
                 els.results.scorePct.textContent = `${Math.round((correctCount / questions.length) * 100)}%`;
                 els.results.scoreAbs.textContent = `${correctCount} / ${questions.length}`;
-                els.results.correct.textContent = correctCount;
-                els.results.incorrect.textContent = incorrectCount;
-                els.results.skipped.textContent = skippedCount;
+                els.results.correct.textContent = correctCount; els.results.incorrect.textContent = incorrectCount; els.results.skipped.textContent = skippedCount;
 
-                // Render Review
-                els.results.reviewList.innerHTML = '';
+                els.results.reviewList.replaceChildren(); 
                 if (incorrectList.length === 0) {
                     els.results.reviewContainer.classList.add('hidden');
                 } else {
                     els.results.reviewContainer.classList.remove('hidden');
+                    const frag = document.createDocumentFragment();
                     incorrectList.forEach(item => {
                         const div = document.createElement('div');
                         div.className = `review-card ${item.ans.status === 'skipped' ? 'skipped-card' : ''}`;
@@ -950,67 +692,40 @@
                             <div class="review-your-ans">Your Answer: ${item.ans.status === 'skipped' ? '<em>Skipped</em>' : item.ans.submitted}</div>
                             <div class="review-correct-ans">Correct Answer: ${item.q.correct}</div>
                         `;
-                        els.results.reviewList.appendChild(div);
+                        frag.appendChild(div);
                     });
+                    els.results.reviewList.appendChild(frag);
                 }
 
                 switchView('results');
+                renderMath(els.results.reviewList);
             };
 
-            const retakeQuiz = () => {
-                if (currentQuiz) startQuiz(currentQuiz.name);
-            };
+            const retakeQuiz = () => { if (currentQuiz) startQuiz(currentQuiz.name); };
+            const showHome = () => { currentQuiz = null; switchView('home'); };
 
-            const showHome = () => {
-                currentQuiz = null;
-                switchView('home');
-            };
-
-            // Keyboard Shortcuts
             const handleKeyboard = (e) => {
-                // Only process if in quiz view
                 if (els.views.quiz.classList.contains('hidden')) return;
-
                 const ansState = userAnswers[currentIdx];
-                const activeTag = document.activeElement.tagName;
-                const isTextInput = activeTag === 'INPUT' || activeTag === 'TEXTAREA';
+                const isTextInput = document.activeElement.tagName === 'INPUT';
 
                 if (e.key === 'Enter') {
-                    if (!ansState && questions[currentIdx].type === 'text') {
-                        submitTextAnswer();
-                    } else if (ansState) {
-                        nextQuestion();
-                    }
-                }
-                else if (e.key === 'ArrowLeft') {
-                    // Prevent overriding text input cursor navigation
-                    if (!isTextInput) prevQuestion();
-                }
-                else if (e.key === 'ArrowRight') {
-                    if (!isTextInput) {
-                        if (ansState) nextQuestion();
-                        else skipQuestion();
-                    }
-                }
+                    if (!ansState && questions[currentIdx].type === 'text') submitTextAnswer();
+                    else if (ansState) nextQuestion();
+                } else if (e.key === 'ArrowLeft' && !isTextInput) prevQuestion();
+                else if (e.key === 'ArrowRight' && !isTextInput) { ansState ? nextQuestion() : skipQuestion(); }
             };
 
-            // Expose public methods for inline onclick handlers
-            return {
-                init,
-                startQuiz,
-                deleteQuiz,
-                skipQuestion,
-                nextQuestion,
-                prevQuestion,
-                quitQuiz,
-                retakeQuiz,
-                showHome
-            };
+            // Exposed renameQuiz here so the inline onclick handler can access it
+            return { init, startQuiz, deleteQuiz, renameQuiz, skipQuestion, nextQuestion, prevQuestion, quitQuiz, retakeQuiz, showHome };
         })();
 
-        // Bootstrap
-        window.addEventListener('DOMContentLoaded', App.init);
-
+        window.App = App;
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', App.init);
+        } else {
+            App.init();
+        }
     </script>
 </body>
 </html>

@@ -1,0 +1,10 @@
+const firebaseConfig = {
+        apiKey: "AIzaSyAFQLqwVm8VxgBH8D8ubwarFCKaDkCcuQk",
+        authDomain: "flashcards-3faea.firebaseapp.com",
+        databaseURL: "https://flashcards-3faea-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "flashcards-3faea",
+        storageBucket: "flashcards-3faea.firebasestorage.app",
+        messagingSenderId: "530389763322",
+        appId: "1:530389763322:web:49fe73f56d5ac8df737543",
+        measurementId: "G-FDQYP2MPQY"
+    };
